@@ -427,8 +427,8 @@
     </div>
 
     <script>
-        // 內建 API 設定
-        const API_URL = 'https://script.google.com/macros/s/AKfycbw0m_0QSP3ArGNuvNKWF-PdC9BgxVAh6IGfxnz8FBIh3DqZxk2Qzu9RQrOkfXWZJd6Odw/exec';
+        // ⚠️ 請將此網址替換為您最新部署的 Google Apps Script 網址
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwFulcp6p61Yo-QiK8JtUS49oONkSwzJKZLtPmRr0qyALbDbYQZ-nt2BiU9xJ1XSievXg/exec';
         
         // 全域變數
         let callRecords = [];
@@ -453,7 +453,7 @@
             loadRecords();
         });
 
-        // 載入紀錄
+        // 載入紀錄 - 使用 GET 方式避免 CORS
         async function loadRecords() {
             recordsList.innerHTML = `
                 <div class="loading">
@@ -463,10 +463,7 @@
             `;
             
             try {
-                const response = await fetch(API_URL + '?action=getAll&timestamp=' + Date.now(), {
-                    method: 'GET',
-                    mode: 'cors'
-                });
+                const response = await fetch(`${API_URL}?action=getAll&timestamp=${Date.now()}`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -496,7 +493,7 @@
             }
         }
 
-        // 表單提交
+        // 表單提交 - 使用 GET 方式避免 CORS
         callForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -523,7 +520,9 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⏳ 新增中...';
             
-            const formData = {
+            // 建立 URL 參數
+            const params = new URLSearchParams({
+                action: 'add',
                 customerName: customerName,
                 customerPhone: customerPhone,
                 callerName: callerName,
@@ -531,20 +530,10 @@
                 callTime: document.getElementById('callTime').value,
                 notes: document.getElementById('notes').value.trim(),
                 status: '待處理'
-            };
+            });
             
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'add',
-                        data: formData
-                    })
-                });
+                const response = await fetch(`${API_URL}?${params.toString()}`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -626,24 +615,19 @@
             `).join('');
         }
 
-        // 更新狀態
+        // 更新狀態 - 使用 GET 方式避免 CORS
         async function updateStatus(index, newStatus) {
             const record = callRecords[index];
             if (!record) return;
             
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'updateStatus',
-                        rowIndex: index + 2,
-                        status: newStatus
-                    })
+                const params = new URLSearchParams({
+                    action: 'updateStatus',
+                    rowIndex: index + 2,
+                    status: newStatus
                 });
+                
+                const response = await fetch(`${API_URL}?${params.toString()}`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -661,24 +645,19 @@
             }
         }
 
-        // 刪除紀錄
+        // 刪除紀錄 - 使用 GET 方式避免 CORS
         async function deleteRecord(index) {
             if (!confirm('確定要刪除這筆紀錄嗎？')) {
                 return;
             }
             
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'delete',
-                        rowIndex: index + 2
-                    })
+                const params = new URLSearchParams({
+                    action: 'delete',
+                    rowIndex: index + 2
                 });
+                
+                const response = await fetch(`${API_URL}?${params.toString()}`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -759,6 +738,24 @@
                 }, 300);
             }, 3000);
         }
+
+        // 測試連線
+        async function testConnection() {
+            try {
+                const response = await fetch(`${API_URL}?action=test`);
+                const data = await response.json();
+                console.log('連線測試結果:', data);
+                showNotification(data.message, data.status === 'success' ? 'success' : 'error');
+            } catch (error) {
+                console.error('連線測試失敗:', error);
+                showNotification('❌ 連線測試失敗: ' + error.message, 'error');
+            }
+        }
+
+        // 頁面載入時測試連線
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testConnection, 1000);
+        });
     </script>
 </body>
 </html>
